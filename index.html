@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ASAT 2026 - SDN NGASEM I</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --accent: #f59e0b;
+            --bg: #f1f5f9;
+            --text-main: #1e293b;
+            --white: #ffffff;
+            --danger: #ef4444;
+            --success: #10b981;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; transition: all 0.2s ease; font-family: 'Inter', system-ui, sans-serif; }
+        body { background: var(--bg); margin: 0; user-select: none; color: var(--text-main); overflow-x: hidden; }
+
+        #cheat-overlay { 
+            display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.98); 
+            color: white; z-index: 9999; justify-content: center; align-items: center; text-align: center;
+            padding: 30px; backdrop-filter: blur(15px);
+        }
+
+        #login-page {
+            position: fixed; inset: 0; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); 
+            display: flex; justify-content: center; align-items: center; z-index: 1000; padding: 20px;
+        }
+        .login-card { background: white; padding: 40px; border-radius: 20px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); text-align: center; }
+        .logo-tutwuri { width: 100px; height: auto; margin-bottom: 20px; display: inline-block; }
+
+        header { 
+            background: var(--white); border-bottom: 2px solid var(--border); padding: 0 25px; 
+            display: flex; justify-content: space-between; align-items: center; height: 75px;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .timer-box { background: #fff1f2; padding: 10px 20px; border-radius: 10px; border: 1px solid #ffe4e6; font-weight: 800; font-size: 1.3rem; color: var(--danger); font-family: monospace; }
+
+        .main-wrapper { display: flex; min-height: calc(100vh - 75px); padding: 25px; gap: 25px; max-width: 1400px; margin: 0 auto; }
+        .soal-section { flex: 3; background: white; border-radius: 15px; border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .soal-content { flex: 1; padding: 30px; font-size: 1.15rem; line-height: 1.7; overflow-y: auto; }
+        
+        .opt-item { border: 1px solid var(--border); padding: 15px; margin-bottom: 12px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 15px; }
+        .opt-item:hover { background: #f8fafc; border-color: var(--primary); }
+        .opt-item.selected { background: #eff6ff; border: 2px solid var(--primary); font-weight: 600; }
+        .opt-label { min-width: 32px; height: 32px; border-radius: 50%; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+        .selected .opt-label { background: var(--primary); color: white; border-color: var(--primary); }
+
+        .sidebar { flex: 1; background: white; border-radius: 15px; padding: 20px; max-width: 320px; border: 1px solid var(--border); height: fit-content; position: sticky; top: 100px; }
+        .grid-nomor { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 15px; }
+        .btn-nomor { aspect-ratio: 1/1; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: 8px; font-weight: 700; font-size: 0.85rem; background: white; }
+        .btn-nomor.active { border: 2px solid var(--primary); color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+        .btn-nomor.filled { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-nomor.doubt { background: var(--accent); color: white; border-color: var(--accent); }
+
+        #result-page { display: none; max-width: 500px; margin: 50px auto; background: white; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+
+        /* Style untuk gambar di dalam soal */
+        .img-soal { 
+            display: block; 
+            max-width: 100%; 
+            height: auto; 
+            max-height: 350px; 
+            margin: 15px auto; 
+            border-radius: 8px; 
+            border: 1px solid var(--border); 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            .main-wrapper { flex-direction: column; padding: 15px; }
+            .sidebar { max-width: 100%; order: 2; position: static; }
+            .soal-section { order: 1; min-height: 450px; }
+            .grid-nomor { grid-template-columns: repeat(6, 1fr); }
+        }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+<div id="cheat-overlay">
+    <div>
+        <h1 style="font-size: 3rem; margin: 0;">⚠️</h1>
+        <h2>PELANGGARAN TERDETEKSI</h2>
+        <p>Jangan tinggalkan halaman ujian!</p>
+        <button onclick="document.getElementById('cheat-overlay').style.display='none'" style="padding: 12px 30px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: bold;">KEMBALI KE UJIAN</button>
+    </div>
+</div>
+
+<div id="login-page">
+    <div class="login-card">
+        <img src="https://awsimages.detik.net.id/community/media/visual/2023/05/02/lambang-tut-wuri-handayani.png?w=700&q=90" class="logo-tutwuri" alt="Logo">
+        <h1 style="color: var(--primary); margin: 0; font-size: 1.6rem;">ASAT BAHASA INDONESIA</h1>
+        <p style="margin-top: 5px; font-weight: 600; color: #64748b;">SD NEGERI NGASEM I TAHUN 2026</p>
+        
+        <div style="text-align: left; margin-top: 20px;">
+            <label style="font-weight: bold; font-size: 0.9rem;">Nama Lengkap</label>
+            <input type="text" id="stu-name" style="width: 100%; padding: 12px; margin: 8px 0 20px 0; border: 2px solid var(--border); border-radius: 8px;" placeholder="Nama sesuai absen...">
+            
+            <label style="font-weight: bold; font-size: 0.9rem;">Nomor Peserta</label>
+            <input type="text" id="stu-id" style="width: 100%; padding: 12px; margin: 8px 0 25px 0; border: 2px solid var(--border); border-radius: 8px;" placeholder="Contoh: 2026-001">
+        </div>
+        
+        <button onclick="startExam()" style="width: 100%; padding: 15px; border-radius: 8px; border: none; background: var(--primary); color: white; font-weight: 700; cursor: pointer;">MULAI UJIAN SEKARANG</button>
+    </div>
+</div>
+
+<header id="exam-header" style="display: none;">
+    <div>
+        <small style="color: #64748b; font-weight: bold;">PESERTA:</small>
+        <div id="user-display" style="font-weight: 800; color: var(--primary);">NAMA PESERTA</div>
+    </div>
+    <div class="timer-box" id="timer">60:00</div>
+</header>
+
+<div class="main-wrapper" id="exam-body" style="display: none;">
+    <div class="soal-section">
+        <div style="padding: 15px 25px; background: #f8fafc; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; font-weight: 700;">
+            <span id="header-no">SOAL NO 1</span>
+            <span id="q-type" style="background: #e0f2fe; color: var(--primary); font-size: 0.75rem; padding: 4px 10px; border-radius: 6px;">PILIHAN GANDA</span>
+        </div>
+        <div class="soal-content" id="content-area"></div>
+        <div style="padding: 20px 25px; border-top: 1px solid var(--border); display: flex; gap: 10px; background: #f8fafc;">
+            <button id="btn-prev" onclick="nav(-1)" style="padding: 12px 20px; border: none; border-radius: 8px; background: #e2e8f0; font-weight: 700; cursor: pointer;">KEMBALI</button>
+            <button onclick="toggleDoubt()" style="padding: 12px 20px; border: none; border-radius: 8px; background: var(--accent); color: white; font-weight: 700; cursor: pointer;">RAGU</button>
+            <button id="btn-next" onclick="nav(1)" style="flex-grow: 1; padding: 12px 20px; border: none; border-radius: 8px; background: var(--primary); color: white; font-weight: 700; cursor: pointer;">BERIKUTNYA</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div style="font-weight: 800; font-size: 0.9rem; margin-bottom: 10px; display: flex; justify-content: space-between;">
+            <span>NAVIGASI SOAL</span> 
+            <span id="progress" style="color: var(--primary);">0/0</span>
+        </div>
+        <div class="grid-nomor" id="nav-grid"></div>
+        <button onclick="confirmFinish()" style="width: 100%; margin-top: 25px; padding: 15px; border-radius: 10px; border: none; background: var(--danger); color: white; font-weight: 700; cursor: pointer;">SELESAI & KIRIM</button>
+    </div>
+</div>
+
+<div id="result-page">
+    <h2 style="color: var(--primary);">UJIAN SELESAI</h2>
+    <div style="font-size: 4rem; font-weight: 900; color: var(--success); margin: 20px 0;" id="final-score">0</div>
+    <div id="result-stats" style="text-align: left; background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border);"></div>
+    <button onclick="location.reload()" style="width: 100%; padding: 14px; border-radius: 10px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: bold;">KELUAR</button>
+</div>
+
+<script>
+    // MASUKKAN URL WEB APP GOOGLE APPS SCRIPT ANDA DISINI
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyd7_3dnWZ3c2O5paLtqWPcJaNyg_yVOIqrsQmVkOZHTir7RxsPk0xHm5ccCQE1qC43/exec"; 
+
+    // BANK SOAL
+    // Gunakan properti 'img' untuk menambahkan gambar pada soal tertentu
+    const bankSoal = [
+        { id: 1, type: 'pg', q: "Salah satu cara menyusun peta pikiran adalah ….", o: ["menentukan judul", "menentukan topik utama", "membuat ringkasan materi", "membuat kesimpulan"], a: "B" },
+        { id: 2, type: 'pg', img : "https://media.quizizz.com/_mdserver/main/media/resource/gs/quizizz-media/quizzes/76cfb065-7ab3-4541-b745-300ca3f2dfba-v2?w=200&h=200", passage: "Perhatikan Peta pikiran berikut ini untuk no 2dan 3", q: "Topik dari peta pikiran di atas adalah ….", o: ["pantai yang penuh sampah", "denda bagi yang membuang sampah sembarangan", "keindahan pantai", "wisata pantai"], a: "A" },
+        { id: 3, type: 'pg', q: "Kalimat yang tepat untuk mengisi kalimat rumpang pada peta pikiran di atas adalah ….", o: ["manfaat sampah", "macam macam sampah", "daur ulang Sampah", "dampak positif sampah"], a: "C" },
+        { id: 4, type: 'pg', passage: "Di sekolah, Melati dan Isabel belajar tentang orang-orang yang mengubah dunia, seperti Nelson Mandela, Martin Luther King, dan Mahatma Gandhi. Terinspirasi dari tokoh-tokoh tersebut, Melati dan Isabel berpikir, “Perubahan apa, ya, yang bisa kita buat sekarang sebagai anak-anak Pulau Bali?", q: "Tokoh-tokoh dunia yang menginspirasi Isabel dan Melati adalah ….", o: ["Nelson Mandela, Thomas Alfa edison, Martin Luther King", "Nelson Mandela, Mahatma Gandhi, Albert Enstain", "Nelson Mandela, Martin Luther King, James watt", "Nelson Mandela, Martin Luther King, Mahatma Gandhi"], a: "D" },
+        { id: 5, type: 'pg', q: "Arti dari kata 'terinspirasi' pada paragraf di atas adalah ….", o: ["Terkenal", "Terilhami", "Terbaik", "Terdepan"], a: "B" },
+        { id: 6, type: 'pg', q: "Berikut ini salah satu cara menyampaikan pendapat yang dilakukan secara lisan, adalah ….", o: ["poster", "Iklan", "diskusi", "blog"], a: "C" },
+        { id: 7, type: 'pg', q: "Biografi memuat informasi berupa fakta serta disajikan dalam bentuk ....", o: ["cerita", "dialog", "kisah", "narasi"], a: "D" },
+        { id: 8, type: 'pg', q: "Rudi memiliki sebuah blog pribadi untuk opini dan pengalaman hidup. Blog Rudi merupakan ….", o: ["blog teknologi", "blog pribadi", "blog perusahaan", "blog berita"], a: "B" },
+        { id: 9, type: 'pg', q: "Berikut ini yang bukan merupakan isi dari sebuah pidato adalah ….", o: ["Pendapat", "Gagasan", "cerita sehari-hari", "pengetahuan"], a: "C" },
+        { id: 10, type: 'pg', passage: "Liburan akhir tahun pelajaran hampir tiba. Siswa kelas enam mengadakan rapat dipimpin oleh Agni, sang ketua kelas. Agenda rapat kali ini adalah menentukan tujuan liburan perpisahan kelas. Siswa kelas enam sudah menabung sejak awal tahun ajaran untuk keperluan ini.", q: "Siswa kelas enam mengadakan rapat membahas ....", o: ["memilih ketua kelas baru", "liburan perpisahan kelas", "membahas tugas sekolah", "membuat jadwal belajar"], a: "B" },
+        { id: 11, type: 'pg', img : "https://media.quizizz.com/_mdserver/main/media/resource/gs/quizizz-media/quizzes/372dc59c-7b14-4888-a02f-e2f32e7448de-v2?w=200&h=200", passage: "Perhatikan tabel berikut untuk nomor 11 dan 12 !", q: "Barang yang memiliki prioritas penting dan mendesak untuk dipenuhi adalah ….", o: ["sepatu roda", "cat air dan kuas", "boneka lucu", "buku cerita detektif"], a: "B" },
+        { id: 12, type: 'pg', q: "Celana jeans merupakan barang yang memiliki prioritas ….", o: ["tidak penting", "penting tapi tidak mendesak", "sedikit penting", "tidak berminat lagi"], a: "A" },
+        { id: 13, type: 'pg', img : "https://media.quizizz.com/_mdserver/main/media/resource/gs/quizizz-media/quizzes/222ad8f3-bae5-4419-be9a-575e5f4db3a4-v2?w=200&h=200", passage: "Iklan 3 hotel yang berada di sekitar Kota Yogyakarta (untuk menjawab soal No.13 sampai 14)", q: "Fasilitas yang sama dari ketiga hotel tersebut adalah ….", o: ["memakai kipas angin", "memberikan sarapan gratis", "memberikan loker gratis", "memberikan Wifi gratis"], a: "B" },
+        { id: 14, type: 'pg', q: "Pilihan hotel yang paling murah dari ketiga hotel tersebut adalah ….", o: ["Hotel Pesona", "Hotel Cempaka", "Hotel Asri Wijaya", "Hotel Nirmala"], a: "A" },
+        { id: 15, type: 'pg', img : "https://media.quizizz.com/_mdserver/main/media/resource/gs/quizizz-media/quizzes/9a2fd774-65f2-4298-aa09-e5696657e1f3-v2?w=200&h=200", q: "Tanda panah pada kolom di kuitansi menunjuk komponen ….", o: ["nama orang yang menyerahkan uang", "nama orang yang menerima uang", "jumlah uang yang diserahkan", "cap atau stempel perusahaan"], a: "A" },
+        { id: 16, type: 'pg', q: "Salah satu cara yang benar dalam bertransaksi menggunakan kuitansi elektronik yaitu ….", o: ["memerlukan tanda tangan", "tidak memerlukan tanda tangan", "memerlukan cap basah", "tidak perlu tujuan pembayaran"], a: "B" },
+        { id: 17, type: 'pg', passage: "Sore hari sepulang sekolah, Hana mendapati ayahnya sedang duduk di teras sambil memegang ponsel. Senyumnya merekah, matanya tampak berbinar seperti melihat sesuatu yang mengagumkan. “Apa sih yang dilihat ayah?” batin Hana. “Eh, Hana. Sini, Ayah mau tunjukkan sesuatu.” Hana mendekat dan duduk di sebelah ayahnya. Pak Rizal menunjukkan video dari ponselnya. Terlihatlah video sebuah keluarga sedang berbelanja di supermarket tanpa kasir. Mereka bisa mengambil barang-barang di rak dengan bebas. Kamera-kamera yang terpasang di toko merekam barang apa saja yang diambil dari rak. Setelah selesai berbelanja, pelanggan bisa pulang. Secara otomatis, uang di rekening pelanggan akan berkurang sesuai harga barang yang diambil.", q: "Berdasarkan cerita, keluarga tersebut membayar dengan cara ….", o: ["bayar cash di kasir", "transfer barcode", "kartu ATM", "memindai barang otomatis tanpa kasir"], a: "D" },
+        { id: 18, type: 'pg', q: "Salah satu langkah untuk menulis sebuah kisah fiksi ilmiah adalah ….", o: ["membuat daftar isi", "membuat kata pengantar", "menentukan ide cerita", "mempublikasikan nama penulis"], a: "C" },
+        { id: 19, type: 'pg', passage: "“Ngompol! Frida ngompol ! ” teriak Hanafi sambil tertawa-tawa. Tangannya menunjuk ke arah Frida. Muti dan Frida yang sedang berjalan menuju kantin terkejut. Teman-teman yang lain mengalihkan pandangan ke arah Frida. Beberapa anak berbisik-bisik. Muti memeriksa sekilas bagian belakang rok seragam merah Frida. “Kamu bocor. Ayo, kita ke toilet,” bisik Muti ke Frida. Muti mengajak Frida berjalan cepat-cepat meninggalkan area kantin.", q: "Yang dilakukan Muti saat melihat rok Frida basah adalah ….", o: ["mengajak ke kantin", "mengajak ke toilet", "membiarkan sendirian", "menertawakan Frida"], a: "B" },
+        { id: 20, type: 'pg', img : "https://media.quizizz.com/_mdserver/main/media/resource/gs/quizizz-media/quizzes/b8fc9701-e066-4163-878c-5713e1b0d5a7-v2?w=200&h=200", passage: "Perhatikan tabel beriku !", q: "Berdasarkan tabel, kalimat fakta ditunjukkan nomor ….", o: ["1", "2", "3", "4"], a: "C" },
+        { id: 21, type: 'pg', passage: "Ayahku banting tulang setiap hari untuk menghidupi keluarga kami", q: "Makna ungkapan 'banting tulang' yaitu ….", o: ["Bersemangat", "bekerja keras", "bermalas-malasan", "bersantai"], a: "B" },
+        { id: 22, type: 'pg', q: "Makna peribahasa 'sudah jatuh tertimpa tangga' adalah ….", o: ["kebaikan dibalas keburukan", "mendapatkan musibah beruntun", "menang jadi arang", "menyalahkan orang lain"], a: "B" },
+        { id: 23, type: 'pg', q: "Shanti dan Shinta mirip sekali. Mereka bagaikan ....", o: ["langit dan bumi", "jarum dalam sekam", "katak dalam tempurung", "pinang dibelah dua"], a: "D" },
+        { id: 24, type: 'pg', passage: "Telepon genggam dinyalakan, pasar malam pun dibuka.Bunyi nyaring panggilan, warna-warni potret wajah, Variasi permainan, mereka asyik sendiri. Ibuku tak mau ketinggalan, ikut ambil bagian. Aku ditinggal sendirian, tak punya teman mengobrol. Aku bosan, kesepian, seperti tersesat di tengah keramaian. Nak, di sana orang-orang membuat keributan, katanya. Tapi ia tak tahu temanku menarik rambutku hingga aku terjatuh tadi pagi.", q: "Perasaan yang paling dominan dalam puisi ini adalah ….", o: ["bosan dan kesepian", "bosan dan gembira", "kesepian dan gembira", "sedih dan putus asa"], a: "A" },
+        { id: 25, type: 'pg', q: "Kalimat majemuk bertingkat adalah ....", o: ["kalimat pendek langsung", "terdiri dari satu jenis kalimat", "terdiri dari dua jenis kalimat atau lebih", "tidak memiliki subjek"], a: "C" },
+        { id: 26, type: 'pg', q: "Contoh kalimat majemuk bertingkat sebab akibat adalah ...", o: ["Saya pergi ke toko.", "Dia makan ketika telepon bunyi.", "Salma belajar tekun sehingga bisa ujian.", "Ibu masak, ayah bersih rumah."], a: "C" },
+        { id: 27, type: 'pg', q: "Berikut ini yang merupakan salah satu dari unsur resensi buku adalah ....", o: ["alur resensi", "konsep resensi", "identitas buku", "keunggulan buku"], a: "C" },
+        { id: 28, type: 'pg', q: "Perbedaan utama antara teks fiksi dan fakta adalah ....", o: ["fiksi fakta, fakta cerita", "fiksi tidak cerita", "fiksi dialog saja", "fiksi khayal, fakta kenyataan"], a: "D" },
+        { id: 29, type: 'pg', q: "Yang termasuk contoh cerita fiksi adalah ….", o: ["Biografi Soekarno", "Tsunami Aceh", "Malin Kundang", "Membaca Buku"], a: "C" },
+        { id: 30, type: 'pg', q: "Teks fiksi menggunakan bahasa yang ….", o: ["santai", "formal", "baku", "resmi"], a: "A" },
+        { id: 31, type: 'pg', q: "Salah satu tahapan tulisan argumentatif adalah ….", o: ["mencetak naskah", "membuat kesimpulan", "membuat kerangka", "membuat ringkasan"], a: "C" },
+        { id: 32, type: 'pg', q: "Berikut ini yang merupakan salah satu dari kerangka tulisan argumentatif adalah ….", o: ["Saran", "alur", "amanat", "ide pokok"], a: "D" },
+        { id: 33, type: 'pg', q: "Penulisan daftar pustaka yang tepat adalah ….", o: ["H. Das’ad, Latif. 2022. Media Sosial, Suatu Alternatif. Jakarta: Elex Media Komputindo.", "Latih, H. Das’ad. 2022. Media Sosial, Suatu Alternatif. Jakarta: Elex Media Komputindo.", "Latih, H. Das’ad. 2022. Media Sosial, Suatu Alternatif. Elex Media Komputindo: Jakarta.", "Latih. H. Das’ad. 2022. Media Sosial, Suatu Alternatif. Jakarta: Elex Media Komputindo."], a: "B" },
+        { id: 34, type: 'pg', q: "Tujuan utama dari menyunting tulisan adalah ....", o: ["menyulitkan pembaca", "menghilangkan info", "sesuai kaidah dan masuk akal", "tambah kata tidak relevan"], a: "C" },
+        { id: 35, type: 'pg', passage: "Tidak hanya orang dewasa, kini cukup banyak ditemui anak-anak bermain medsos alias media sosial. Di sana, mereka bisa menambah pertemanan, sekaligus mendapat banyak informasi penting dan menarik. ", q: "Kata yang perlu disunting adalah ….", o: ["dewasa -> cukup umur", "banyak -> membludak", "alias -> atau", "di sana -> disana"], a: "C" },
+        { id: 36, type: 'isian', q: "Makna kata 'abstain' dalam pemungutan suara adalah ....", a: "tidak memilih" },
+        { id: 37, type: 'isian', q: "Orang yang menulis blog disebut dengan ....", a: "blogger" },
+        { id: 38, type: 'isian', q: "Salam pembuka dan ucapan syukur terdapat pada bagian … pidato", a: "pembukaan" },
+        { id: 39, type: 'isian', img : "https://media.quizizz.com/_mdserver/main/media/resource/gs/quizizz-media/quizzes/902e9540-be5a-4966-b62c-d96a935fea17-v2?w=200&h=200", q: "Selama liburan, Agni menjadikan … sebagai prioritas teratas karena termasuk acara inti.", a: "tiket masuk candi borobudur" },
+        { id: 40, type: 'isian', img : "https://media.quizizz.com/_mdserver/main/media/resource/gs/quizizz-media/quizzes/9b0f5b6a-064d-4921-97d6-350974c359c0-v2?w=200&h=200", q: "Jenis kuitansi bedasarkan gambar di atas adalah …. ", a: "kuitansi elektronik" },
+        { id: 41, type: 'isian', q: "Ibu membawa buah tangan kue kesukaanku". Ungkapan “buah tangan” memiliki makna …. .", a: "oleh-oleh" },
+        { id: 42, type: 'isian', q: "Kata hubung 'agar' menunjukkan hubungan ....", a: "tujuan" },
+        { id: 43, type: 'isian', q: "Ringkasan singkat tentang isi buku dalam resensi disebut ....", a: "sinopsis" },
+        { id: 44, type: 'isian', q: "Teks nonfiksi ditulis berdasarkan kejadian ….", a: "nyata" },
+        { id: 45, type: 'isian', q: "Penulisan judul buku pada daftar pustaka ditulis ….", a: "miring" },
+        { id: 46, type: 'uraian', q: "Apa yang dimaksud dengan blog?", a: null },
+        { id: 47, type: 'uraian', q: "Apa perbedaan kuitansi biasa dengan kuitansi elektronik?", a: null },
+        { id: 48, type: 'uraian', q: "Jelaskan arti peribahasa: a. Kalah jadi abu menang jadi arang, b. Tak ada gading yang tak retak", a: null },
+        { id: 49, type: 'uraian', q: "Buatlah 2 contoh kalimat majemuk bertingkat!", a: null },
+        { id: 50, type: 'uraian', q: "Buatlah 2 contoh kalimat fakta!", a: null }
+    ];
+
+    let current = 0;
+    let answers = JSON.parse(localStorage.getItem('cbt_ans')) || {};
+    let doubts = JSON.parse(localStorage.getItem('cbt_dbt')) || {};
+
+    // Deteksi Curang
+    document.addEventListener("visibilitychange", () => {
+        if (document.hidden && document.getElementById('login-page').style.display === 'none') {
+            document.getElementById('cheat-overlay').style.display = 'flex';
+        }
+    });
+
+    function startExam() {
+        const n = document.getElementById('stu-name').value;
+        const i = document.getElementById('stu-id').value;
+        if(!n || !i) return alert("Isi Nama dan Nomor!");
+        
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log(e));
+        }
+
+        document.getElementById('user-display').innerText = n.toUpperCase();
+        document.getElementById('login-page').style.display = 'none';
+        document.getElementById('exam-header').style.display = 'flex';
+        document.getElementById('exam-body').style.display = 'flex';
+        initNav(); render(); startTimer(60); 
+    }
+
+    function render(idx = current) {
+        current = idx;
+        const s = bankSoal[idx];
+        document.getElementById('header-no').innerText = `SOAL NO ${idx + 1}`;
+        document.getElementById('q-type').innerText = s.type.toUpperCase();
+        
+        const area = document.getElementById('content-area');
+        
+        // Bacaan/Passage
+        let html = s.passage ? `<div style="background:#fefce8; padding:15px; border-radius:8px; margin-bottom:15px; border-left:4px solid var(--accent)">${s.passage}</div>` : "";
+        
+        // Logika Gambar (Baru)
+        if (s.img) {
+            html += `<img src="${s.img}" class="img-soal" alt="Gambar Soal ${idx+1}">`;
+        }
+
+        // Pertanyaan
+        html += `<div style="font-weight:600; margin-bottom:15px">${s.q}</div>`;
+
+        if(s.type === 'pg') {
+            const labels = ['A','B','C','D'];
+            s.o.forEach((opt, i) => {
+                const label = labels[i];
+                html += `<div class="opt-item ${answers[idx]===label?'selected':''}" onclick="saveAns('${label}')">
+                    <div class="opt-label">${label}</div><span>${opt}</span>
+                </div>`;
+            });
+        } else {
+            html += `<textarea id="ans-text" onblur="saveAns(this.value)" placeholder="Ketik jawaban lengkap di sini..." style="width:100%; height:150px; padding:15px; border-radius:12px; border:2px solid var(--border); outline:none; font-size:1rem;">${answers[idx]||''}</textarea>`;
+        }
+        area.innerHTML = html;
+
+        document.getElementById('btn-prev').style.visibility = idx === 0 ? "hidden" : "visible";
+        const btnNext = document.getElementById('btn-next');
+        if(idx === bankSoal.length - 1) {
+            btnNext.innerText = "SELESAI";
+            btnNext.style.background = "var(--success)";
+            btnNext.onclick = confirmFinish;
+        } else {
+            btnNext.innerText = "BERIKUTNYA";
+            btnNext.style.background = "var(--primary)";
+            btnNext.onclick = () => nav(1);
+        }
+        updateNavUI();
+    }
+
+    function saveAns(v) {
+        if(v === undefined) return;
+        answers[current] = v;
+        localStorage.setItem('cbt_ans', JSON.stringify(answers));
+        if(bankSoal[current].type === 'pg') render(current);
+        updateNavUI();
+    }
+
+    function toggleDoubt() {
+        doubts[current] = !doubts[current];
+        localStorage.setItem('cbt_dbt', JSON.stringify(doubts));
+        updateNavUI();
+    }
+
+    function initNav() {
+        const g = document.getElementById('nav-grid');
+        bankSoal.forEach((_, i) => {
+            const d = document.createElement('div');
+            d.className = 'btn-nomor'; d.id = `n-${i}`; d.innerText = i + 1;
+            d.onclick = () => render(i);
+            g.appendChild(d);
+        });
+    }
+
+    function updateNavUI() {
+        let f = 0;
+        bankSoal.forEach((_, i) => {
+            const el = document.getElementById(`n-${i}`);
+            el.className = 'btn-nomor';
+            if(i === current) el.classList.add('active');
+            if(answers[i]) { el.classList.add('filled'); f++; }
+            if(doubts[i]) el.classList.add('doubt');
+        });
+        document.getElementById('progress').innerText = `${f}/${bankSoal.length}`;
+    }
+
+    function nav(d) {
+        const txt = document.getElementById('ans-text');
+        if(txt) saveAns(txt.value);
+        let n = current + d; 
+        if(n>=0 && n<bankSoal.length) render(n); 
+    }
+
+    function startTimer(m) {
+        let t = m * 60;
+        const timerInterval = setInterval(() => {
+            let mn = Math.floor(t/60); let s = t%60;
+            document.getElementById('timer').innerText = `${mn}:${s<10?'0':''}${s}`;
+            if(t-- <= 0) {
+                clearInterval(timerInterval);
+                confirmFinish(true);
+            }
+        }, 1000);
+    }
+
+    function confirmFinish(auto = false) {
+        const txt = document.getElementById('ans-text');
+        if(txt) saveAns(txt.value);
+
+        if(!auto && !confirm("Kirim jawaban sekarang?")) return;
+        
+        let b = 0;
+        bankSoal.forEach((s, i) => { 
+            if(s.type==='pg' && answers[i]===s.a) b++; 
+            if(s.type==='isian' && answers[i]?.toLowerCase().trim()===s.a) b++; 
+        });
+        
+        const skor = Math.round((b/45)*100);
+        const nama = document.getElementById('stu-name').value;
+        const noPeserta = document.getElementById('stu-id').value;
+
+        fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                nama: nama,
+                nomor: noPeserta,
+                skor: skor,
+                jawaban: JSON.stringify(answers)
+            })
+        });
+
+        document.getElementById('exam-body').style.display = 'none';
+        document.getElementById('exam-header').style.display = 'none';
+        document.getElementById('result-page').style.display = 'block';
+        document.getElementById('final-score').innerText = skor;
+        document.getElementById('result-stats').innerHTML = `
+            <strong>Nama:</strong> ${nama}<br>
+            <strong>No:</strong> ${noPeserta}<br>
+            <strong>Objektif:</strong> Benar ${b} dari 45.<br>
+            <em>Uraian akan dikoreksi manual.</em>
+        `;
+        localStorage.clear();
+    }
+</script>
+</body>
+</html>
